@@ -44,39 +44,145 @@ class Network:
                 self.classes.append(1)
             else:
                 self.classes.append(2)
-    def error(self, actual):
+    def Error(self, actual):
         self.error = np.abs(actual-self.classes)
-        self.errorscore = self.error/(2*len(actual))
-
-
+        self.trueError = actual-self.classes
+        self.errorscore = np.sum(np.abs(self.trueError))/(2*len(actual))
+        self.error = (self.trueError)/(2*len(actual))
+        
+    def updateWeights(self, dw, step_size):
+        self.layer1.weights = self.layer1.weights - np.sign(dw) * step_size
+        self.layer2.weights = self.layer2.weights - np.sign(dw) * step_size
+        self.layer3.weights = self.layer3.weights - np.sign(dw) * step_size
+    def updateBiases(self, dt, step_size_2):
+        self.layer1.biases = self.layer1.biases - np.sign(dt) * step_size_2
+        self.layer2.biases = self.layer2.biases - np.sign(dt) * step_size_2
+        self.layer3.biases = self.layer3.biases - np.sign(dt) * step_size_2
+    
+    def updateWeightsRandom(self):
+        self.layer1.weights = 1.0*np.random.normal(0,.5,(2, 100))
+        self.layer2.weights = 1.0*np.random.normal(0,.5,(100,10))
+        self.layer3.weights = 1.0*np.random.normal(0,.5,(10, 3))
+    def updateBiasesRandom(self):
+        self.layer1.biases = 1.0*np.random.normal(0,.5,(1, 100))
+        self.layer2.biases = 1.0*np.random.normal(0,.5,(1,10))
+        self.layer3.biases = 1.0*np.random.normal(0,.5,(1, 3))
+    
+    def updateWeightsCross(self, weights1, weights2, weights3):
+        w1 = self.layer1.weights
+        w2 = self.layer2.weights
+        w3 = self.layer3.weights
+        
+        size = w1.shape[0]*w1.shape[1]
+        n = np.random.randint(0, int(size/2))
+        
+        positions = np.zeros((n,2))
+        for i in range(n):
+            positions[i,0] = np.random.randint(0, w1.shape[0])
+            positions[i,1] = np.random.randint(0, w1.shape[1])
+        
+        
+        
 network1 = Network()
-
-inpu, actual = spiral_data(100, 3)
+'''
+inpu, actual = spiral_data(200, 3)
 network1.forward(inpu)
-network1.error(actual)
+network1.Error(actual)
 
-print(network1.errorscore)
+#print(network1.errorscore)
 #print(network1.errorscore.shape)
 #print(network1.layer1.weights.shape, network1.layer1.biases.shape)
 #print(network1.layer2.weights.shape, network1.layer2.biases.shape)
 #print(network1.layer3.weights.shape, network1.layer3.biases.shape)
 
 gradient = inpu.T.dot(network1.error)/ inpu.shape[0]
-print(gradient)
-
+#print(gradient)
+'''
 num_iterations = 100
-dw = np.zeros(num_iterations)
-step_size = .9
-incFactor = 1.1
-step_size_max = 1.0
+dw = []
+dt = []
+step_size = 0.1
+step_size_2 = 0.1
+incFactor = 1.2
+step_size_max = 50.
 decFactor = 0.9
 step_size_min = 0.0
+
+inpu, actual = spiral_data_with_cloudinessi(100, 3, 1)
+loss = []
+errorscorelist = []
+calltypes = []
+
 for i in range(num_iterations):
-    dw[i] = inpu.T.dot(network1.error)/ inpu.shape[0]
+    inpu, actual = spiral_data_with_cloudinessi(100, 3, 1)
+    network1.forward(inpu)
+    network1.Error(actual)
+    errorscorelist.append(network1.errorscore)
     
-    if dw[i] * dw[i - 1] > 0:
+    #print(inpu.T.dot(network1.error)/ inpu.shape[0])
+    tup = inpu.T.dot(network1.error)/ inpu.shape[0]
+    
+    dw.append(tup[0])
+    dt.append(tup[1])
+    
+    if dw[i] * dw[i - 1] >= 0:
         step_size = min(step_size * incFactor, step_size_max)
-    elif dw[i] * dw[i - 1] < 0:
+    #elif dw[i] * dw[i - 1] < 0:
+    else:
         step_size = max(step_size * decFactor, step_size_min)
     
-    w[i] = w[i - 1] - np.sign(dw[i]) * step_size
+    if dt[i] * dt[i - 1] >= 0:
+        step_size_2 = min(step_size_2 * incFactor, step_size_max)
+    #elif dt[i] * dt[i - 1] < 0:
+    else:
+        step_size_2 = max(step_size_2 * decFactor, step_size_min)
+    loss.append(tup)
+    
+    
+    calls = []
+    failsw = 0
+    failsb = 0
+    if i in [0,1,2,3,4]:
+        network1.updateWeights(dw[i], step_size)
+        network1.updateBiases(dt[i], step_size_2)
+        calls.append(0)
+        calls.append(0)
+    else:
+        if np.isclose(dw[i], dw[i-2], rtol= 1e-3, atol=0.0): #add more cases for this and other one
+            failsw +=1
+        else:
+            failsw = failsw
+        if failsw == 2:
+            network1.updateWeightsRandom()
+            calls.append(1)
+            failsw = 0
+        else: 
+            network1.updateWeights(dw[i], step_size)
+            calls.append(0)
+        
+        if np.isclose(dt[i], dt[i-2], rtol= 1e-2, atol=0.0):
+            failsb += 1
+        if failsb == 2:
+            network1.updateBiasesRandom()
+            calls.append(2)
+            failsb = 0
+        else:
+            network1.updateBiases(dt[i], step_size_2)
+            calls.append(0)
+    calltypes.append(np.asarray(calls))
+    
+    
+plt.scatter(inpu[:,0], inpu[:,1], c = network1.classes, cmap = "brg")
+plt.show()
+
+loss = np.asarray(loss)
+calltypes = np.asarray(calltypes)
+print(calltypes)
+print(calltypes.shape)
+plt.plot(range(num_iterations), loss[:,0], label="Loss 1")
+plt.plot(range(num_iterations), loss[:,1], label="Loss 2")
+plt.plot(range(num_iterations), errorscorelist, label="Error Score")
+#plt.scatter(range(num_iterations), calltypes, label="Call types")
+#print(errorscorelist)
+plt.legend()
+plt.show()

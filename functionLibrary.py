@@ -43,7 +43,7 @@ def spiral_data_with_vcloudiness(points, classes, cloudiness = [2.5,2.5]):
 
 class Layer_Dense:
     def __init__(self, n_inputs, n_nuerons):
-        self.weights = 0.9*np.random.randn(n_inputs, n_nuerons)
+        self.weights = 1.0*np.random.normal(0,.5,(n_inputs, n_nuerons))
         self.biases = np.zeros((1, n_nuerons))
     def forward(self, inputs):
         self.output = np.dot(inputs, self.weights) + self.biases
