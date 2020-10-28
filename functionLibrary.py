@@ -4,7 +4,7 @@ Created on Jun 28, 2020
 @author: Stephen
 '''
 import numpy as np
-np.random.seed(0)
+
 
 
 def spiral_data(points, classes):
@@ -42,11 +42,25 @@ def spiral_data_with_vcloudiness(points, classes, cloudiness = [2.5,2.5]):
 
 
 class Layer_Dense:
+    '''
     def __init__(self, n_inputs, n_nuerons):
         self.weights = 1.0*np.random.normal(0,.5,(n_inputs, n_nuerons))
         self.biases = np.zeros((1, n_nuerons))
+    '''
+    def __init__(self, n_inputs, n_nuerons):
+        self.n_inputs = n_inputs
+        self.n_nuerons = n_nuerons
+        self.genetic_code = 1.0*np.random.normal(0,1.0, (1,n_inputs*n_nuerons + n_nuerons))
+        self.makeWeights(self.genetic_code)
+        
     def forward(self, inputs):
         self.output = np.dot(inputs, self.weights) + self.biases
+    
+    def makeWeights(self, genecode):
+        temp = np.reshape(genecode, (self.n_inputs + 1, self.n_nuerons))
+        self.weights = temp[0:self.n_inputs,:]
+        #print(self.weights.shape)
+        self.biases = temp[self.n_inputs:, :]
 
 class Layer_Hysteresis:
     """
@@ -105,6 +119,10 @@ class Activation_HardMax:
     def forward(self, inputs):
         self.output = inputs/np.amax(inputs)
 
+class Activation_Partial:
+    def forward(self, inputs):
+        self.output = inputs/np.sum(np.abs(inputs))
+
 def softmax(inputs):
     expo = np.exp(inputs)
     expo_sum = np.sum(expo)
@@ -128,3 +146,31 @@ def MinusRMSerror(actual, predicted):
 
 def HarmonicMean(actual, predicted):
     return 1/(np.divide(1,actual) + np.divide(1, predicted))
+
+from random import randint
+
+def gencoordinates(m, n, u,v ):
+    seen = set()
+
+    x, y = randint(m, n), randint(u, v)
+
+    while True:
+        seen.add((x, y))
+        yield (x, y)
+        x, y = randint(m, n), randint(u, v)
+        while (x, y) in seen:
+            x, y = randint(m, n), randint(u, v)
+
+if __name__=="__main__":
+    layer1 = Layer_Dense(2, 100)
+    layer2 = Layer_Dense(100,10)
+    layer3 = Layer_Dense(10, 3)
+    
+    assert layer1.weights.shape == (2, 100)
+    assert layer1.biases.shape == (1, 100)
+    assert layer2.weights.shape == (100,10)
+    assert layer2.biases.shape == (1, 10)
+    
+    
+    
+    

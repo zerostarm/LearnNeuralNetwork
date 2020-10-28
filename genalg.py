@@ -1,5 +1,5 @@
 '''
-Created on Jun 28, 2020
+Created on Jun 29, 2020
 
 @author: Stephen
 '''
@@ -9,18 +9,39 @@ import matplotlib.pyplot as plt
 from functionLibrary import *
 
 class Network:
-    def __init__(self):
-        
+    def __init__(self): 
+        '''
+        Initializes a new copy of the network 
+        '''
         self.layer1 = Layer_Dense(2, 100)
-        self.layer2 = Layer_Dense(100,10)
-        self.layer3 = Layer_Dense(10, 3)
+        self.layer2 = Layer_Dense(100,100)
+        self.layer3 = Layer_Dense(100, 100)
+        self.layer4 = Layer_Dense(100, 10)
+        self.layer5 = Layer_Dense(10,3)
         
         self.layerA = Activation_ReLU()
         self.layerA2 = Activation_ReLU()
-        self.layerA3 = Activation_HardMax()
-    
+        self.layerA3 = Activation_IntegerPart()
+        self.layerA4 = Activation_ReLU()
+        self.layerA5 = Activation_SoftMax()
+        
+        self.Optimalw1 = [self.layer1.weights]
+        self.Optimalw2 = [self.layer2.weights]
+        self.Optimalw3 = [self.layer3.weights]
+        
+        self.Optimalb1 = [self.layer1.biases]
+        self.Optimalb2 = [self.layer2.biases]
+        self.Optimalb3 = [self.layer3.biases]
+        
+        self.layers = [self.layer1, self.layer2, self.layer3, self.layer4, self.layer5]
+        self.activations = [self.layerA, self.layerA2, self.layerA3, self.layerA4, self.layerA5]
+        
+        self.errorscore = 1e100
+        
+        self.mutation_chance = 25
+        
     def forward(self, X):
-        self.layers = [self.layer1, self.layer2, self.layer3]
+        '''
         #print(X.shape)
         self.layer1.forward(X)
         #print(layer1.output.shape)
@@ -32,8 +53,16 @@ class Network:
         self.layer3.forward(self.layerA2.output)
         #print(layer3.output)
         self.layerA3.forward(self.layer3.output)
+        '''
+        for i in range(len(self.layers)):
+            if i == 0: 
+                self.layers[0].forward(X)
+            else:
+                self.layers[i].forward(self.activations[i-1].output)
+            self.activations[i].forward(self.layers[i].output)
+        #Make all in forward above into a for loop based on self.layers.
         
-        self.output = self.layerA3.output
+        self.output = self.activations[-1].output
         self.classes = []
     
         for row in self.output:
@@ -44,12 +73,17 @@ class Network:
                 self.classes.append(1)
             else:
                 self.classes.append(2)
+
     def Error(self, actual):
         self.error = np.abs(actual-self.classes)
         self.trueError = actual-self.classes
-        self.errorscore = np.sum(np.abs(self.trueError))/(2*len(actual))
-        self.error = (self.trueError)/(2*len(actual))
-        
+        self.errorscore = np.sum(np.abs(self.trueError))/(5/3*len(actual))
+        '''
+        out = 1000*np.ones(actual.shape)
+        np.divide(5/3*len(actual), self.trueError, out = out, where=self.trueError!=0.0) 
+        print(out)
+        self.error = out'''
+    
     def updateWeights(self, dw, step_size):
         self.layer1.weights = self.layer1.weights - np.sign(dw) * step_size
         self.layer2.weights = self.layer2.weights - np.sign(dw) * step_size
@@ -68,121 +102,86 @@ class Network:
         self.layer2.biases = 1.0*np.random.normal(0,.5,(1,10))
         self.layer3.biases = 1.0*np.random.normal(0,.5,(1, 3))
     
-    def updateWeightsCross(self, weights1, weights2, weights3):
-        w1 = self.layer1.weights
-        w2 = self.layer2.weights
-        w3 = self.layer3.weights
-        
-        size = w1.shape[0]*w1.shape[1]
-        n = np.random.randint(0, int(size/2))
-        
-        positions = np.zeros((n,2))
-        for i in range(n):
-            positions[i,0] = np.random.randint(0, w1.shape[0])
-            positions[i,1] = np.random.randint(0, w1.shape[1])
-        
-        
-        
-network1 = Network()
-'''
-inpu, actual = spiral_data(200, 3)
-network1.forward(inpu)
-network1.Error(actual)
+    def updateWeightsCross(self, network2):
+        crossedGencode = []
+        for i in range(len(self.layers)):
+            w = np.copy(self.layers[i].genetic_code)
+            w2 = np.copy(network2.layers[i].genetic_code)
+            cross_over_point = np.random.randint(len(w))
+            for i in range(cross_over_point):
+                temp = w[i]
+                w[i] = w2[i]
+                w2[i] = temp
+            w = self.mutate(w)
+            crossedGencode.append(w)
+        newNetwork = Network()
+        for i in range(len(newNetwork.layers)):
+            newNetwork.layers[i].makeWeights(crossedGencode[i])
+        return newNetwork
+    
+    def mutate(self, genecode):
+        if np.random.randint(100) < self.mutation_chance:
+            for i in range(np.random.randint(len(genecode))):
+                n = np.random.randint(len(genecode))
+                genecode[n] = 1.0*np.random.normal(0,10.0)
+        return genecode
 
-#print(network1.errorscore)
-#print(network1.errorscore.shape)
-#print(network1.layer1.weights.shape, network1.layer1.biases.shape)
-#print(network1.layer2.weights.shape, network1.layer2.biases.shape)
-#print(network1.layer3.weights.shape, network1.layer3.biases.shape)
+number_of_generations = 500
+number_of_individuals = 1000
 
-gradient = inpu.T.dot(network1.error)/ inpu.shape[0]
-#print(gradient)
-'''
-num_iterations = 100
-dw = []
-dt = []
-step_size = 0.1
-step_size_2 = 0.1
-incFactor = 1.2
-step_size_max = 50.
-decFactor = 0.9
-step_size_min = 0.0
 
-inpu, actual = spiral_data_with_cloudinessi(100, 3, 1)
-loss = []
-errorscorelist = []
-calltypes = []
+individuals = []
 
-for i in range(num_iterations):
-    inpu, actual = spiral_data_with_cloudinessi(100, 3, 1)
-    network1.forward(inpu)
-    network1.Error(actual)
-    errorscorelist.append(network1.errorscore)
-    
-    #print(inpu.T.dot(network1.error)/ inpu.shape[0])
-    tup = inpu.T.dot(network1.error)/ inpu.shape[0]
-    
-    dw.append(tup[0])
-    dt.append(tup[1])
-    
-    if dw[i] * dw[i - 1] >= 0:
-        step_size = min(step_size * incFactor, step_size_max)
-    #elif dw[i] * dw[i - 1] < 0:
-    else:
-        step_size = max(step_size * decFactor, step_size_min)
-    
-    if dt[i] * dt[i - 1] >= 0:
-        step_size_2 = min(step_size_2 * incFactor, step_size_max)
-    #elif dt[i] * dt[i - 1] < 0:
-    else:
-        step_size_2 = max(step_size_2 * decFactor, step_size_min)
-    loss.append(tup)
-    
-    
-    calls = []
-    failsw = 0
-    failsb = 0
-    if i in [0,1,2,3,4]:
-        network1.updateWeights(dw[i], step_size)
-        network1.updateBiases(dt[i], step_size_2)
-        calls.append(0)
-        calls.append(0)
-    else:
-        if np.isclose(dw[i], dw[i-2], rtol= 1e-3, atol=0.0): #add more cases for this and other one
-            failsw +=1
-        else:
-            failsw = failsw
-        if failsw == 2:
-            network1.updateWeightsRandom()
-            calls.append(1)
-            failsw = 0
-        else: 
-            network1.updateWeights(dw[i], step_size)
-            calls.append(0)
-        
-        if np.isclose(dt[i], dt[i-2], rtol= 1e-2, atol=0.0):
-            failsb += 1
-        if failsb == 2:
-            network1.updateBiasesRandom()
-            calls.append(2)
-            failsb = 0
-        else:
-            network1.updateBiases(dt[i], step_size_2)
-            calls.append(0)
-    calltypes.append(np.asarray(calls))
-    
-    
-plt.scatter(inpu[:,0], inpu[:,1], c = network1.classes, cmap = "brg")
+data = []
+goodclasses = []
+for i in range(number_of_generations):
+    inpu, actual = spiral_data_with_cloudinessi(90, 3, 1)
+    data.append(inpu)
+    goodclasses.append(actual)
+#print(data)
+
+best_individual = Network()
+best_individual2 = Network()
+best_individual.forward(data[0])
+best_individual2.forward(data[0])
+best_individual.Error(goodclasses[0])
+best_individual2.Error(goodclasses[0])
+
+for i in range(number_of_generations):
+    best_individual_of_generation = Network()
+    best_2_of_generation = Network()
+    best_individual_of_generation.forward(data[0])
+    best_2_of_generation.forward(data[0])
+    best_individual_of_generation.Error(goodclasses[0])
+    best_2_of_generation.Error(goodclasses[0])
+
+    for j in range(number_of_individuals):
+        child = best_individual.updateWeightsCross(best_individual2)
+        individuals.append(child)
+        individuals[j].forward(data[i])
+        individuals[j].Error(goodclasses[i])
+        if individuals[j].errorscore <= best_individual_of_generation.errorscore:
+            best_2_of_generation = best_individual_of_generation
+            best_individual_of_generation = individuals[j]
+        #plt.scatter(j, best_individual_of_generation.errorscore)
+        #plt.scatter(j, best_2_of_generation.errorscore)
+    #plt.show()
+    if best_individual_of_generation.errorscore <= best_individual.errorscore:
+        best_individual2 = best_individual
+        best_individual = best_individual_of_generation
+    if best_2_of_generation.errorscore <= best_individual2.errorscore:
+        best_individual2 = best_2_of_generation
+    individuals = []           
+    plt.scatter(i, best_individual.errorscore)
+    print("Generation", i, "Done!")
 plt.show()
-
-loss = np.asarray(loss)
-calltypes = np.asarray(calltypes)
-print(calltypes)
-print(calltypes.shape)
-plt.plot(range(num_iterations), loss[:,0], label="Loss 1")
-plt.plot(range(num_iterations), loss[:,1], label="Loss 2")
-plt.plot(range(num_iterations), errorscorelist, label="Error Score")
-#plt.scatter(range(num_iterations), calltypes, label="Call types")
-#print(errorscorelist)
-plt.legend()
+data = np.asarray(data)
+goodclasses = np.asarray(goodclasses)
+#print(data.shape)
+best_individual.forward(data[-1])
+best_individual.Error(goodclasses[-1])
+#plt.scatter(data[-1,:,0], data[-1,:,1], c = goodclasses[-1, :], cmap = "brg")
+#plt.show()
+#print(best_individual.classes)
+plt.scatter(data[-1,:,0], data[-1,:,1], c = best_individual.classes, cmap = "brg")
 plt.show()

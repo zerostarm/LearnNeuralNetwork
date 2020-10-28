@@ -9,6 +9,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from functionLibrary import *
+'''
+def __init__(self, n_inputs, n_nuerons):
+        self.genetic_code = 1.0*np.random.normal(0,.5, (1,n_inputs*n_nuerons + n_nuerons))
+        temp = np.reshape(self.genetic_code, (n_inputs + 1, n_nuerons))
+        self.weights = temp[0:2,:]
+        print(self.weights.shape)
+        self.biases = np.zeros((1, n_nuerons))
+    def forward(self, inputs):
+        self.output = np.dot(inputs, self.weights) + self.biases
+'''
+
 
 np.random.seed(0)
 
