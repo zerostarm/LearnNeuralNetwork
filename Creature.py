@@ -100,16 +100,22 @@ class Creature:
         Generates a random gene code for this creature 
         """
         self.energy_max = random.randint(0,15)
+        print("Energy Max = " + str(self.energy_max))
         
         self.keep_amount = random.randint(0, self.energy_max)
+        print("Keep Energy Amount = " + str(self.keep_amount))
         
         self.mutation_chance = random.randint(1,2)
+        print("Mutation chance = " + str(self.mutation_chance))
         
         self.death_chance = random.randint(1,2)
+        print("Death chance = " + str(self.death_chance))
         
         self.sense_range = self.make_less_16(random.randint(1, 100))
+        print("Sense Range = " + str(self.sense_range))
         
         self.weights = self.make_fraction(self.gaussian_ints())
+        print("Weights = " + str(self.weights))
         
         self.genecode += self.make_gene(self.energy_max) 
         self.genecode += self.make_gene(self.keep_amount) 
@@ -144,21 +150,29 @@ class Creature:
         
         return gene
         
-    def make_gene_array(self, array_thing):
+    def make_gene_array(self, array_thing1):
         """
         Makes a gene from an Array
         Two cases:
             1) large numbers
             2) fractions
         """
-        array_thing = np.asarray(array_thing)
+        array_thing = np.asarray(array_thing1)
+        
+        
+        print(np.shape(array_thing1))
+        print(array_thing1)
+        
         gene = self.codons["start"]
         
-        #print(np.shape(array_thing))
-        #print(array_thing)
+        print(type(array_thing[1]))
+        print(type(array_thing[1]) == np.int32)
         
         if np.shape(array_thing) == (2,):
+            if type(array_thing[])
             gene += self.codons["positive"] + self.codons[15] + self.codons["*"] + self.codons["positive"] + self.codons[array_thing[0]] + self.codons["+"] + self.codons["positive"] + self.codons[array_thing[1]]
+            
+        
         else:
             for i in range(np.shape(array_thing)[1]):
                 if array_thing[0,i] >=0:
@@ -190,7 +204,6 @@ class Creature:
     def make_fraction(self,number):
         frac = Fraction(number).limit_denominator()
         numerator, denominator = frac.numerator, frac.denominator
-        
         return [self.make_less_16(numerator), self.make_less_16(denominator)]
     
     def gaussian_ints(self):
@@ -201,9 +214,6 @@ class Creature:
         nums = np.random.choice(x, size = 1, p = prob)
         return nums[0]/100
         
-    
-        
-        
     def set_genecode_str(self, stri):
         self.genecode = stri
         return True
@@ -213,11 +223,17 @@ class Creature:
         for i in array_numbers:
             self.genecode += self.make_gene(i)
         return True
-
+    
+    def unpack_genecode(self):
+        split_at_start = self.genecode.split(sep=self.codons["start"])
+        print(split_at_start)
+    
+    
+    
 if __name__ == "__main__":
     Test_creature = Creature(0,0)
     Test_creature.generate_random_genecode()
     print("Gene code = " + Test_creature.genecode)
-    
+    Test_creature.unpack_genecode()
     
         
